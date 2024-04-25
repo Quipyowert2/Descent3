@@ -748,11 +748,51 @@ void GoalDoFrame(object *obj) {
           posp = &goal_obj->pos;
           roomnum = goal_obj->roomnum;
 
+          if (ai_info->path.num_paths != 0) {
+            float dist = vm_VectorDistance(
+                &AIDynamicPath[ai_info->path.num_paths - 1].pos[ai_info->path.path_end_node[ai_info->path.num_paths - 1]],
+                posp);
+
+            if (dist < 5.0f) {
+              int obj_room = BOA_INDEX(obj->roomnum);
+              int path_room = BOA_INDEX(AIDynamicPath[ai_info->path.cur_path].roomnum[ai_info->path.cur_node]);
+              vector path_pos = AIDynamicPath[ai_info->path.cur_path].pos[ai_info->path.cur_node];
+
+              if (obj_room != path_room) {
+                fvi_query fq;
+                fvi_info hit_info;
+
+                fq.p0 = &obj->pos;
+                fq.startroom = obj->roomnum;
+                fq.p1 = &path_pos;
+                fq.rad = obj->size / 4.0f;
+                fq.thisobjnum = OBJNUM(obj);
+                fq.ignore_obj_list = NULL;
+                fq.flags = FQ_CHECK_OBJS | FQ_NO_RELINK | FQ_IGNORE_NON_LIGHTMAP_OBJECTS;
+
+                if (fvi_FindIntersection(&fq, &hit_info) == HIT_NONE) {
+                  mprintf((0, "AI OBJ Path: No need to update the path for obj %d\n", OBJNUM(obj)));
+                  f_make_path = false;
+                }
+              }
+            }
+          }
+        } else {
+          kill_reason = AIN_GOAL_INVALID;
+          f_kill_goal = true;
+        }
+      } else if (POSGOAL(cur_goal)) {
+        f_make_path = true;
+
+        posp = &cur_goal->g_info.pos;
+        roomnum = cur_goal->g_info.roomnum;
+
+        if (ai_info->path.num_paths != 0) {
           float dist = vm_VectorDistance(
               &AIDynamicPath[ai_info->path.num_paths - 1].pos[ai_info->path.path_end_node[ai_info->path.num_paths - 1]],
               posp);
 
-          if (dist < 5.0f && ai_info->path.num_paths != 0) {
+          if (dist < 5.0f) {
             int obj_room = BOA_INDEX(obj->roomnum);
             int path_room = BOA_INDEX(AIDynamicPath[ai_info->path.cur_path].roomnum[ai_info->path.cur_node]);
             vector path_pos = AIDynamicPath[ai_info->path.cur_path].pos[ai_info->path.cur_node];
@@ -770,45 +810,9 @@ void GoalDoFrame(object *obj) {
               fq.flags = FQ_CHECK_OBJS | FQ_NO_RELINK | FQ_IGNORE_NON_LIGHTMAP_OBJECTS;
 
               if (fvi_FindIntersection(&fq, &hit_info) == HIT_NONE) {
-                mprintf((0, "AI OBJ Path: No need to update the path for obj %d\n", OBJNUM(obj)));
+                mprintf((0, "AI POS Path: No need to update the path for obj %d\n", OBJNUM(obj)));
                 f_make_path = false;
               }
-            }
-          }
-        } else {
-          kill_reason = AIN_GOAL_INVALID;
-          f_kill_goal = true;
-        }
-      } else if (POSGOAL(cur_goal)) {
-        f_make_path = true;
-
-        posp = &cur_goal->g_info.pos;
-        roomnum = cur_goal->g_info.roomnum;
-
-        float dist = vm_VectorDistance(
-            &AIDynamicPath[ai_info->path.num_paths - 1].pos[ai_info->path.path_end_node[ai_info->path.num_paths - 1]],
-            posp);
-
-        if (dist < 5.0f && ai_info->path.num_paths != 0) {
-          int obj_room = BOA_INDEX(obj->roomnum);
-          int path_room = BOA_INDEX(AIDynamicPath[ai_info->path.cur_path].roomnum[ai_info->path.cur_node]);
-          vector path_pos = AIDynamicPath[ai_info->path.cur_path].pos[ai_info->path.cur_node];
-
-          if (obj_room != path_room) {
-            fvi_query fq;
-            fvi_info hit_info;
-
-            fq.p0 = &obj->pos;
-            fq.startroom = obj->roomnum;
-            fq.p1 = &path_pos;
-            fq.rad = obj->size / 4.0f;
-            fq.thisobjnum = OBJNUM(obj);
-            fq.ignore_obj_list = NULL;
-            fq.flags = FQ_CHECK_OBJS | FQ_NO_RELINK | FQ_IGNORE_NON_LIGHTMAP_OBJECTS;
-
-            if (fvi_FindIntersection(&fq, &hit_info) == HIT_NONE) {
-              mprintf((0, "AI POS Path: No need to update the path for obj %d\n", OBJNUM(obj)));
-              f_make_path = false;
             }
           }
         }
@@ -930,7 +934,7 @@ int GoalAllocSlot(object *obj, int level, float influence) {
     }
   }
 
-  if (cur_slot < MAX_GOALS) {
+  if (cur_slot < MAX_GOALS && cur_slot != AI_INVALID_INDEX) {
     ai_info->goals[cur_slot].used = true;
   } else {
     cur_slot = AI_INVALID_INDEX;
