@@ -861,6 +861,9 @@ typedef struct ai_frame {
 class ai_dynamic_path {
 public:
   ai_dynamic_path() {
+    for (int& i : roomnum) {
+      i = -1;
+    }
     num_nodes = 0;
     use_count = 0;
     owner_handle = OBJECT_HANDLE_NONE;
