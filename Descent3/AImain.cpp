@@ -2105,9 +2105,10 @@ void AITurnTowardsDir(object *obj, /*velocity *new_vel,*/ vector *goal_dir /*, b
     return; // Big objects have more play
 
   if (obj->type != OBJ_WEAPON) {
-    obj->ai_info->flags |= AIF_REPORT_NEW_ORIENT;
-    if (obj->ai_info)
+    if (obj->ai_info) {
+      obj->ai_info->flags |= AIF_REPORT_NEW_ORIENT;
       obj->ai_info->saved_orient = obj->orient;
+    }
   }
 
   goal_angle = vm_DeltaAngVecNorm(&obj->orient.fvec, goal_dir, &u_axis);
